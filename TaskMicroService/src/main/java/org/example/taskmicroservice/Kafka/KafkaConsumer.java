@@ -46,6 +46,7 @@ public class KafkaConsumer {
         CompletableFuture<Integer> future = new CompletableFuture<>();
         pendingResponses.put(requestId, future);
 
+        // go to project service
         kafkaTemplate.send("taskTopicProjectId", message);
 
         return future.get(5, TimeUnit.SECONDS);
@@ -53,7 +54,7 @@ public class KafkaConsumer {
 
 
 
-    @KafkaListener(topics = "projectTopicProjectId", groupId = "TaskGroup")
+    @KafkaListener(topics = "projectTopicProjectId", groupId = "ProjectGroup")
     public void handleProjectId(String message) {
 
         Map<String, String> data = parseMessage(message);

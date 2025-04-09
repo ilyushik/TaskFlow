@@ -16,4 +16,9 @@ public class KafkaTopicConfig {
     public NewTopic projectTopicProjectId() {
         return new NewTopic("projectTopicProjectId", 1, (short) 1);
     }
+
+    @Bean
+    public NewTopic projectTopicSendEmail() {
+        return new NewTopic("projectTopicSendEmail", 1, (short) 1);
+    }
 }

@@ -25,11 +25,6 @@ public class KafkaConsumer {
 
     private final KafkaTemplate<String, String> kafkaTemplate;
 
-//    @KafkaListener(topics = "topicToken", groupId = "ProjectGroup")
-//    public void listenToken(String message) {
-//        logger.info("Token: " + message);
-//    }
-
     private Map<String, String> parseMessage(String message) {
         Map<String, String> result = new HashMap<>();
         String[] parts = message.split(", ");
@@ -42,7 +37,7 @@ public class KafkaConsumer {
         return result;
     }
 
-    @KafkaListener(topics = "taskTopicProjectId", groupId = "ProjectGroup")
+    @KafkaListener(topics = "taskTopicProjectId", groupId = "TaskGroup")
     public void handleProjectId(String message) {
         logger.info("Got data from task service: " + message);
 
@@ -59,6 +54,7 @@ public class KafkaConsumer {
 
         String messageResponse = "requestId: " + requestId + ", id: " + id;
 
+        // go to task service
         kafkaTemplate.send(responseTopic, messageResponse);
     }
 }

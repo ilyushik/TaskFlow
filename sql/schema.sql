@@ -62,7 +62,6 @@ CREATE TABLE notification (
                                user_id INT NOT NULL,
                                message TEXT NOT NULL,
                                type INT REFERENCES notification_type(id),
-                               is_read BOOLEAN DEFAULT FALSE,
                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
