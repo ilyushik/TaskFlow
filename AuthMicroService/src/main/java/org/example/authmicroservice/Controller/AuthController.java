@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.authmicroservice.DTO.AuthRequest;
 import org.example.authmicroservice.DTO.AuthResponse;
 import org.example.authmicroservice.DTO.RegisterRequest;
+import org.example.authmicroservice.Model.User;
 import org.example.authmicroservice.Repository.UserRepository;
 import org.example.authmicroservice.Service.AuthService;
 import org.springframework.http.ResponseEntity;
@@ -48,6 +49,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest request) {
+        User user = userRepository.findUserByUsername(request.getUsername()).orElse(null);
         if (request.getUsername().isEmpty()) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("username", "Username cannot be empty"));
         }
@@ -57,8 +59,8 @@ public class AuthController {
         if (!userRepository.existsUserByUsername(request.getUsername())) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("username", "Username is not exist"));
         }
-        if (passwordEncoder.matches(request.getPassword(), userRepository.findUserByUsername(request.getUsername())
-                .get().getPassword())) {
+        assert user != null;
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("password", "Password does not match"));
         }
 

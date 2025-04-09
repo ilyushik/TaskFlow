@@ -43,7 +43,7 @@ public class AuthService {
 
         String token = jwtService.generateToken(user);
 
-        kafkaProducer.sendToken(token);
+        // kafkaProducer.sendToken(token);
         return token;
     }
 }

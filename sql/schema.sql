@@ -27,10 +27,10 @@ CREATE TABLE project_role (
 );
 
 CREATE TABLE project_member (
+                                 id INT AUTO_INCREMENT PRIMARY KEY,
                                  project_id INT NOT NULL,
                                  user_id INT NOT NULL,
                                  role INT REFERENCES project_role(id),
-                                 PRIMARY KEY (project_id, user_id),
                                  FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
 );
 
@@ -79,3 +79,38 @@ CREATE TABLE report (
                          result TEXT,                       
                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+INSERT INTO user_role (role) VALUES ('ROLE_ADMIN'), ('ROLE_USER'), ('ROLE_MANAGER');
+
+INSERT INTO project (name, description, deadline, priority, owner_id) VALUES
+('Project Alpha', 'First big project', '2025-12-31', 1, 1),
+('Project Beta', 'Second test project', '2025-11-30', 2, 2);
+
+INSERT INTO project_role (role) VALUES ('OWNER'), ('MEMBER'), ('VIEWER');
+
+INSERT INTO project_member (project_id, user_id, role) VALUES
+(1, 1, 1),
+(1, 2, 2), 
+(2, 3, 1);
+
+INSERT INTO task_status (status) VALUES ('TO DO'), ('IN PROGRESS'), ('DONE');
+
+--INSERT INTO task (title, description, status, priority, due_date, project_id, assigned_user_id) VALUES
+--('Setup Backend', 'Set up Spring Boot backend for Alpha', 1, 1, '2025-06-01', 1, 2),
+--('Design UI', 'Create mockups for UI', 2, 2, '2025-05-20', 1, 2),
+--('Write Documentation', 'Initial draft', 1, 3, '2025-06-15', 2, 3);
+
+--INSERT INTO notification_type (type) VALUES ('INFO'), ('WARNING'), ('ALERT');
+
+--INSERT INTO notification (user_id, message, type) VALUES
+--(2, 'Task assigned: Setup Backend', 1),
+--(3, 'New comment on task', 2),
+--(1, 'System maintenance scheduled', 3);
+
+--INSERT INTO report_status (status) VALUES ('PENDING'), ('IN PROGRESS'), ('COMPLETED'), ('FAILED');
+--
+--
+--INSERT INTO report (user_id, type, parameters, result) VALUES
+--(1, 3, '{"project":"Alpha"}', 'Success'),
+--(2, 1, '{"date_range":"2025-01-01 to 2025-03-01"}', NULL),
+--(3, 4, '{"metric":"user_activity"}', 'Error: Unauthorized');

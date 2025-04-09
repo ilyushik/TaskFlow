@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 public class KafkaTopicConfig {
 
     @Bean
-    public NewTopic topicToken() {
-        return new NewTopic("topicToken", 1, (short) 1);
+    public NewTopic authTopicToken() {
+        return new NewTopic("authTopicToken", 1, (short) 1);
     }
 }

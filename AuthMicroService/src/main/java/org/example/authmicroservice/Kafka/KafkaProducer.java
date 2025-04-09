@@ -16,6 +16,6 @@ public class KafkaProducer {
 
     public void sendToken(String token) {
         LOGGER.info("Sending token: {}", token);
-        kafkaTemplate.send("topicToken", token);
+        kafkaTemplate.send("authTopicToken", token);
     }
 }
