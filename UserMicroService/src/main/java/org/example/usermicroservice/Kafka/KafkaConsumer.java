@@ -6,7 +6,6 @@ import org.example.usermicroservice.Repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -16,10 +15,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class KafkaConsumer {
 
-    private final KafkaTemplate<String, String> kafkaTemplate;
-
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaConsumer.class);
     private final UserRepository userRepository;
+
+    private final KafkaProducer kafkaProducer;
 
     private Map<String, String> parseMessage(String message) {
         Map<String, String> map = new HashMap<>();
@@ -34,17 +33,16 @@ public class KafkaConsumer {
 
     @KafkaListener(topics = "projectTopicSendEmail", groupId = "ProjectGroup")
     public void getOwnersEmail(String message) {
-        LOGGER.info("Received message: {}", message);
+        LOGGER.info("\n\nReceived message from project service(topic = projectTopicSendEmail): {} \n\n", message);
         Map<String, String> map = parseMessage(message);
         int id = Integer.parseInt(map.get("owner_id"));
         String title = map.get("title");
-        LOGGER.info("Id from message: {}", id);
+        LOGGER.info("\n\nId from message: {} \n\n", id);
         User user = userRepository.findById(id).orElse(null);
         String email = user.getEmail();
 
         String newMessage = "email: " + email + ", title: " + title;
 
-        // go to notification service
-        kafkaTemplate.send("usersTopicSendEmail", newMessage);
+        kafkaProducer.sendMessageToNotification(newMessage);
     }
 }

@@ -14,14 +14,22 @@ public class KafkaProducer {
 
     private static final Logger logger = LoggerFactory.getLogger(KafkaProducer.class);
 
-    /* send owner_id to user service and then user service sends owner's email to
-    notification service */
-
     public void sendEmail(int owner_id, String title) {
         String message = "owner_id: " + owner_id + ", " + "title: " + title;
-        logger.info("Send message: " + message);
+        logger.info("\n\nSend message from project service to user service(topic = projectTopicSendEmail): " + message + "\n\n");
 
         // go to user service
         kafkaTemplate.send("projectTopicSendEmail", message);
+    }
+
+    public void sendProjectsId(String responseTopic,  String messageResponse) {
+        // go to task service
+        logger.info("\n\nSend data from project service to task service(topic = {}): " + messageResponse + "\n\n", responseTopic);
+        kafkaTemplate.send(responseTopic, messageResponse);
+    }
+
+    public void sendProjectResultExistProjectWithSuchId(String message) {
+        logger.info("\n\nSend data from project service to task service(topic = projectTopicResultExistProjectWithSuchId): " + message + "\n\n");
+        kafkaTemplate.send("projectTopicResultExistProjectWithSuchId", message);
     }
 }

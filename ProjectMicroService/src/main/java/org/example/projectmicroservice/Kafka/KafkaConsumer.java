@@ -1,15 +1,11 @@
 package org.example.projectmicroservice.Kafka;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import org.apache.kafka.common.protocol.types.Field;
 import org.example.projectmicroservice.Model.Project;
 import org.example.projectmicroservice.Repository.ProjectRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -23,7 +19,7 @@ public class KafkaConsumer {
 
     private final ProjectRepository projectRepository;
 
-    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final KafkaProducer kafkaProducer;
 
     private Map<String, String> parseMessage(String message) {
         Map<String, String> result = new HashMap<>();
@@ -39,14 +35,14 @@ public class KafkaConsumer {
 
     @KafkaListener(topics = "taskTopicProjectId", groupId = "TaskGroup")
     public void handleProjectId(String message) {
-        logger.info("Got data from task service: " + message);
+        logger.info("\n\nReceived data from task service(topic = taskTopicProjectId): " + message + "\n\n");
 
         Map<String, String> data = parseMessage(message);
         String requestId = data.get("requestId");
         String projectName = data.get("projectName");
         String responseTopic = data.get("response");
 
-        logger.info("requestId: " + requestId + "\nprojectName: " + projectName + "\nresponse: " + responseTopic);
+        logger.info("\n\nrequestId: " + requestId + "\nprojectName: " + projectName + "\nresponse: " + responseTopic + "\n\n");
 
         Project project = projectRepository.findByName(projectName).orElse(null);
         assert project != null;
@@ -54,7 +50,19 @@ public class KafkaConsumer {
 
         String messageResponse = "requestId: " + requestId + ", id: " + id;
 
-        // go to task service
-        kafkaTemplate.send(responseTopic, messageResponse);
+        kafkaProducer.sendProjectsId(responseTopic, messageResponse);
+    }
+
+    @KafkaListener(topics = "taskTopicExistsProjectWithSuchID", groupId = "TaskGroup")
+    public void checkExistsProjectWithSuchID(String message) {
+        logger.info("\n\nReceived data from task service(topic = taskTopicExistsProjectWithSuchID): " + message + "\n\n");
+        Map<String, String> data = parseMessage(message);
+        String requestId = data.get("requestId");
+        int projectId = Integer.parseInt(data.get("projectId"));
+        logger.info("\n\nData after parsing \nrequestId: " + requestId + "\nprojectId: " + projectId + "\n\n");
+        Project project = projectRepository.findById(projectId).orElse(null);
+        String result = project != null ? "true" : "false";
+        String messageResponse = "requestId: " + requestId + ", result: " + result;
+        kafkaProducer.sendProjectResultExistProjectWithSuchId(messageResponse);
     }
 }

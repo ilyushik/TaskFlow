@@ -15,7 +15,7 @@ public class KafkaProducer {
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaProducer.class);
 
     public void sendToken(String token) {
-        LOGGER.info("Sending token: {}", token);
+        LOGGER.info("\n\nSending token: {} \n\n", token);
         kafkaTemplate.send("authTopicToken", token);
     }
 }

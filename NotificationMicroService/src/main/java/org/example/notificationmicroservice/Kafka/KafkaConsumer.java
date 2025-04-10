@@ -16,6 +16,6 @@ public class KafkaConsumer {
 
     @KafkaListener(topics = "usersTopicSendEmail", groupId = "UserGroup")
     public void emailRequest(String message) {
-        logger.info("Requested message {}", message);
+        logger.info("\n\nRequested message from user service(topic = usersTopicSendEmail): {} \n\n", message);
     }
 }

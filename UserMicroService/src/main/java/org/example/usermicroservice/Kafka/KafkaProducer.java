@@ -14,5 +14,9 @@ public class KafkaProducer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaProducer.class);
 
-
+    public void sendMessageToNotification(String newMessage) {
+        // go to notification service
+        LOGGER.info("\n\nSend message from user service to notification service(topic = usersTopicSendEmail): {} \n\n", newMessage);
+        kafkaTemplate.send("usersTopicSendEmail", newMessage);
+    }
 }

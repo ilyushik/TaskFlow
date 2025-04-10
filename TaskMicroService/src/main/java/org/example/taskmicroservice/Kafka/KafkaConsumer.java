@@ -1,12 +1,9 @@
 package org.example.taskmicroservice.Kafka;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -20,11 +17,10 @@ public class KafkaConsumer {
 
     private static final Logger logger = LoggerFactory.getLogger(KafkaConsumer.class);
 
-    private final KafkaTemplate<String, String> kafkaTemplate;
-
-    private final ObjectMapper objectMapper;
+    private final KafkaProducer kafkaProducer;
 
     private final ConcurrentMap<String, CompletableFuture<Integer>> pendingResponses = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, CompletableFuture<Boolean>> pendingResponsesExistsProjectWithId = new ConcurrentHashMap<>();
 
     private Map<String, String> parseMessage(String message) {
         Map<String, String> result = new HashMap<>();
@@ -41,13 +37,11 @@ public class KafkaConsumer {
     public int resolveProjectId(String projectName) throws ExecutionException, InterruptedException, TimeoutException {
         String requestId = UUID.randomUUID().toString();
         String message = "requestId: " + requestId + ", projectName: " + projectName + ", response: projectTopicProjectId";
-        logger.info("Sent data from task service: " + message);
 
         CompletableFuture<Integer> future = new CompletableFuture<>();
         pendingResponses.put(requestId, future);
 
-        // go to project service
-        kafkaTemplate.send("taskTopicProjectId", message);
+        kafkaProducer.sendRequestToGetProjectId(message);
 
         return future.get(5, TimeUnit.SECONDS);
     }
@@ -56,6 +50,8 @@ public class KafkaConsumer {
 
     @KafkaListener(topics = "projectTopicProjectId", groupId = "ProjectGroup")
     public void handleProjectId(String message) {
+
+        logger.info("\n\nReceived data from project service(topic = projectTopicProjectId): " + message + "\n\n");
 
         Map<String, String> data = parseMessage(message);
         String requestId = data.get("requestId");
@@ -66,6 +62,31 @@ public class KafkaConsumer {
         if (future != null) {
             future.complete(id);
         }
+    }
 
+    public boolean projectWithSuchIdExists(int projectId) throws ExecutionException, InterruptedException, TimeoutException {
+        String requestId = UUID.randomUUID().toString();
+        String message = "requestId: " + requestId + ", projectId: " + projectId;
+
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        pendingResponsesExistsProjectWithId.put(requestId, future);
+
+        kafkaProducer.sendRequestExistsProjectWithSuchId(message);
+
+        return future.get(5, TimeUnit.SECONDS);
+    }
+
+    @KafkaListener(topics = "projectTopicResultExistProjectWithSuchId", groupId = "ProjectGroup")
+    public void handleRequestExistsProjectWithSuchId(String message) {
+        logger.info("\n\nReceived data from project service(topic = projectTopicResultExistProjectWithSuchId): " + message + "\n\n");
+        Map<String, String> data = parseMessage(message);
+        String requestId = data.get("requestId");
+        boolean result = Boolean.parseBoolean(data.get("result"));
+        logger.info("\n\nresult: " + result + "\n\n");
+
+        CompletableFuture<Boolean> future = pendingResponsesExistsProjectWithId.get(requestId);
+        if (future != null) {
+            future.complete(result);
+        }
     }
 }

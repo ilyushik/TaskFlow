@@ -16,4 +16,9 @@ public class KafkaTopicConfig {
     public NewTopic taskTopicProjectId() {
         return new NewTopic("taskTopicProjectId", 1, (short) 1);
     }
+
+    @Bean
+    public NewTopic taskTopicExistsProjectWithSuchID() {
+        return new NewTopic("taskTopicExistsProjectWithSuchID", 1, (short) 1);
+    }
 }
