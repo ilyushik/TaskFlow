@@ -25,11 +25,13 @@ public class TaskController {
     private final TaskStatusRepository taskStatusRepository;
 
     @GetMapping("/{projectId}")
-    public ResponseEntity<?> tasksByProject(@PathVariable("projectId") int id) throws ExecutionException,
+    public ResponseEntity<?> tasksByProject(@PathVariable("projectId") int id)
+            throws ExecutionException,
             InterruptedException, TimeoutException {
         boolean projectExists = kafkaConsumer.projectWithSuchIdExists(id);
         if (!projectExists) {
-            return ResponseEntity.badRequest().body(Collections.singletonMap("project", "Project Not Found"));
+            return ResponseEntity.badRequest().body(Collections.singletonMap("project",
+                    "Project Not Found"));
         }
         return ResponseEntity.ok(taskService.tasksByProjectId(id));
     }
@@ -39,17 +41,29 @@ public class TaskController {
             InterruptedException, TimeoutException {
         int projectId = kafkaConsumer.resolveProjectId(addTaskDTO.getProjectName());
         List<Task> tasksByProject = taskService.tasksByProjectId(projectId);
-        if (!tasksByProject.stream().filter(t -> t.getTitle().equals(addTaskDTO.getTitle())).toList().isEmpty()) {
-            return ResponseEntity.badRequest().body(Collections.singletonMap("title", "The task with such title already exists"));
+        if (!tasksByProject.stream().filter(t -> t.getTitle()
+                .equals(addTaskDTO.getTitle())).toList().isEmpty()) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("title",
+                    "The task with such title already exists"));
         }
-        if (!tasksByProject.stream().filter(t -> t.getDescription().equals(addTaskDTO.getDescription())).toList().isEmpty()) {
+        if (!tasksByProject.stream().filter(t -> t.getDescription()
+                .equals(addTaskDTO.getDescription())).toList().isEmpty()) {
             return ResponseEntity
-                    .badRequest().body(Collections.singletonMap("description", "The task with such description already exists"));
+                    .badRequest().body(Collections.singletonMap("description",
+                            "The task with such description already exists"));
+        }
+
+        if (kafkaConsumer.getProjectsDeadline(addTaskDTO.getProjectName())
+                .before(addTaskDTO.getDueDate())) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("dueDate",
+                    "Deadline of task can not be after project's deadline"));
         }
 
         TaskStatus status = taskStatusRepository.findTaskStatusByStatus("TO DO");
-        Task newTask = new Task(addTaskDTO.getTitle(), addTaskDTO.getDescription(), status, addTaskDTO.getPriority(),
-                addTaskDTO.getDueDate(), projectId, addTaskDTO.getAssignedUserId() != null ? addTaskDTO.getAssignedUserId() : null);
+        Task newTask = new Task(addTaskDTO.getTitle(), addTaskDTO.getDescription(), status,
+                addTaskDTO.getPriority(),
+                addTaskDTO.getDueDate(), projectId, addTaskDTO.getAssignedUserId() != null ?
+                addTaskDTO.getAssignedUserId() : null);
 
         return ResponseEntity.ok(taskService.addTask(newTask));
     }

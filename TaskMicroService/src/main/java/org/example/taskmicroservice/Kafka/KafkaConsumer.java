@@ -6,6 +6,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -19,8 +24,12 @@ public class KafkaConsumer {
 
     private final KafkaProducer kafkaProducer;
 
-    private final ConcurrentMap<String, CompletableFuture<Integer>> pendingResponses = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, CompletableFuture<Boolean>> pendingResponsesExistsProjectWithId = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, CompletableFuture<Integer>> pendingResponses =
+            new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, CompletableFuture<Boolean>>
+            pendingResponsesExistsProjectWithId = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, CompletableFuture<Date>> projectsDeadline =
+            new ConcurrentHashMap<>();
 
     private Map<String, String> parseMessage(String message) {
         Map<String, String> result = new HashMap<>();
@@ -34,9 +43,11 @@ public class KafkaConsumer {
         return result;
     }
 
-    public int resolveProjectId(String projectName) throws ExecutionException, InterruptedException, TimeoutException {
+    public int resolveProjectId(String projectName) throws ExecutionException,
+            InterruptedException, TimeoutException {
         String requestId = UUID.randomUUID().toString();
-        String message = "requestId: " + requestId + ", projectName: " + projectName + ", response: projectTopicProjectId";
+        String message = "requestId: " + requestId + ", projectName: " + projectName +
+                ", response: projectTopicProjectId";
 
         CompletableFuture<Integer> future = new CompletableFuture<>();
         pendingResponses.put(requestId, future);
@@ -51,7 +62,8 @@ public class KafkaConsumer {
     @KafkaListener(topics = "projectTopicProjectId", groupId = "ProjectGroup")
     public void handleProjectId(String message) {
 
-        logger.info("\n\nReceived data from project service(topic = projectTopicProjectId): " + message + "\n\n");
+        logger.info("\n\nReceived data from project service(topic = projectTopicProjectId): " +
+                message + "\n\n");
 
         Map<String, String> data = parseMessage(message);
         String requestId = data.get("requestId");
@@ -64,7 +76,8 @@ public class KafkaConsumer {
         }
     }
 
-    public boolean projectWithSuchIdExists(int projectId) throws ExecutionException, InterruptedException, TimeoutException {
+    public boolean projectWithSuchIdExists(int projectId) throws ExecutionException,
+            InterruptedException, TimeoutException {
         String requestId = UUID.randomUUID().toString();
         String message = "requestId: " + requestId + ", projectId: " + projectId;
 
@@ -78,7 +91,8 @@ public class KafkaConsumer {
 
     @KafkaListener(topics = "projectTopicResultExistProjectWithSuchId", groupId = "ProjectGroup")
     public void handleRequestExistsProjectWithSuchId(String message) {
-        logger.info("\n\nReceived data from project service(topic = projectTopicResultExistProjectWithSuchId): " + message + "\n\n");
+        logger.info("\n\nReceived data from project service" +
+                "(topic = projectTopicResultExistProjectWithSuchId): " + message + "\n\n");
         Map<String, String> data = parseMessage(message);
         String requestId = data.get("requestId");
         boolean result = Boolean.parseBoolean(data.get("result"));
@@ -87,6 +101,41 @@ public class KafkaConsumer {
         CompletableFuture<Boolean> future = pendingResponsesExistsProjectWithId.get(requestId);
         if (future != null) {
             future.complete(result);
+        }
+    }
+
+    // function to get project's deadline
+    public Date getProjectsDeadline(String projectsName) throws ExecutionException,
+            InterruptedException, TimeoutException {
+        String requestId = UUID.randomUUID().toString();
+        String message = "requestId: " + requestId + ", projectsName: " + projectsName;
+
+        CompletableFuture<Date> future = new CompletableFuture<>();
+        projectsDeadline.put(requestId, future);
+
+        kafkaProducer.sendRequestToGetProjectsDeadline(message);
+
+        return future.get(5, TimeUnit.SECONDS);
+    }
+
+    // concurrent getting deadline
+    @KafkaListener(topics = "projectTopicProjectsDeadline", groupId = "ProjectService")
+    public void handleProjectsDeadline(String message) throws ParseException {
+        logger.info("\n\nReceived data from project service" +
+                "(topic = projectTopicProjectsDeadline): " + message + "\n\n");
+        Map<String, String> data = parseMessage(message);
+        String requestId = data.get("requestId");
+        String deadline = data.get("projectsDeadline");
+
+        String[] deadlineSplit = deadline.split("-");
+        logger.info("\n\nParsed deadline: " + deadlineSplit[0] + "-" + deadlineSplit[1] +
+                "-" + deadlineSplit[2] + "\n\n");
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date newDate = formatter.parse(deadline);
+
+        CompletableFuture<Date> future = projectsDeadline.get(requestId);
+        if (future != null) {
+            future.complete(newDate);
         }
     }
 }

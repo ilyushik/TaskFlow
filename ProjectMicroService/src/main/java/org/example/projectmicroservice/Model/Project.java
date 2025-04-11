@@ -30,6 +30,7 @@ public class Project {
     @Column(name = "description")
     private String description;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @Column(name = "deadline")
     private Date deadline;
 
@@ -44,7 +45,7 @@ public class Project {
     private Timestamp createdAt;
 
     public Project(String name, String description, Date deadline, int priority,
-                   int ownerId, Timestamp createdAt) {
+                   int ownerId) {
         this.name = name;
         this.description = description;
         this.deadline = deadline;

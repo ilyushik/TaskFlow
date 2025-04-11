@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.*;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +22,8 @@ public class KafkaConsumer {
     private final ProjectRepository projectRepository;
 
     private final KafkaProducer kafkaProducer;
+
+    private final ConcurrentHashMap<String, CompletableFuture<Integer>> mapForOwnersId = new ConcurrentHashMap<>();
 
     private Map<String, String> parseMessage(String message) {
         Map<String, String> result = new HashMap<>();
@@ -42,7 +46,8 @@ public class KafkaConsumer {
         String projectName = data.get("projectName");
         String responseTopic = data.get("response");
 
-        logger.info("\n\nrequestId: " + requestId + "\nprojectName: " + projectName + "\nresponse: " + responseTopic + "\n\n");
+        logger.info("\n\nrequestId: " + requestId + "\nprojectName: " + projectName +
+                "\nresponse: " + responseTopic + "\n\n");
 
         Project project = projectRepository.findByName(projectName).orElse(null);
         assert project != null;
@@ -55,14 +60,61 @@ public class KafkaConsumer {
 
     @KafkaListener(topics = "taskTopicExistsProjectWithSuchID", groupId = "TaskGroup")
     public void checkExistsProjectWithSuchID(String message) {
-        logger.info("\n\nReceived data from task service(topic = taskTopicExistsProjectWithSuchID): " + message + "\n\n");
+        logger.info("\n\nReceived data from task service" +
+                "(topic = taskTopicExistsProjectWithSuchID): " + message + "\n\n");
         Map<String, String> data = parseMessage(message);
         String requestId = data.get("requestId");
         int projectId = Integer.parseInt(data.get("projectId"));
-        logger.info("\n\nData after parsing \nrequestId: " + requestId + "\nprojectId: " + projectId + "\n\n");
+        logger.info("\n\nData after parsing \nrequestId: " + requestId + "\nprojectId: " +
+                projectId + "\n\n");
         Project project = projectRepository.findById(projectId).orElse(null);
         String result = project != null ? "true" : "false";
         String messageResponse = "requestId: " + requestId + ", result: " + result;
         kafkaProducer.sendProjectResultExistProjectWithSuchId(messageResponse);
+    }
+
+    public int getOwnersId(String username) throws ExecutionException,
+            InterruptedException, TimeoutException {
+        String responseId = UUID.randomUUID().toString();
+        String message = "requestId: " + responseId + ", username: " + username;
+
+        CompletableFuture<Integer> future = new CompletableFuture<>();
+        mapForOwnersId.put(responseId, future);
+
+        kafkaProducer.sendOwnersUsername(message);
+
+        return future.get(5, TimeUnit.SECONDS);
+    }
+
+    // concurrent method
+    @KafkaListener(topics = "usersTopicReturnId" , groupId = "UsersGroup")
+    public void handleUsersReturnId(String message) {
+        logger.info("\n\nReceived data from task service" +
+                "(topic = usersTopicReturnId): " + message + "\n\n");
+        Map<String, String> data = parseMessage(message);
+        String requestId = data.get("requestId");
+        int projectId = Integer.parseInt(data.get("id"));
+        logger.info("\n\nData after parsing \nrequestId: " + requestId + "\nprojectId: " +
+                projectId + "\n\n");
+
+        CompletableFuture<Integer> future = mapForOwnersId.get(requestId);
+        if (future != null) {
+            future.complete(projectId);
+        }
+    }
+
+    @KafkaListener(topics = "taskTopicCheckDeadline", groupId = "TaskGroup")
+    public void handleTasksReturnDeadline(String message) {
+        logger.info("\n\nReceived data from task service" +
+                "(topic = taskTopicCheckDeadline): " + message + "\n\n");
+        Map<String, String> data = parseMessage(message);
+        String requestId = data.get("requestId");
+        String projectsName = data.get("projectsName");
+
+        Project project = projectRepository.findByName(projectsName).orElse(null);
+        assert project != null;
+        String newMessage = "requestId: " + requestId + ", projectsDeadline: " + project.getDeadline();
+
+        kafkaProducer.sendProjectsDeadline(newMessage);
     }
 }

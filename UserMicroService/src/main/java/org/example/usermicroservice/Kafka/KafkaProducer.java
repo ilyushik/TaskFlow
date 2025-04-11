@@ -16,7 +16,15 @@ public class KafkaProducer {
 
     public void sendMessageToNotification(String newMessage) {
         // go to notification service
-        LOGGER.info("\n\nSend message from user service to notification service(topic = usersTopicSendEmail): {} \n\n", newMessage);
+        LOGGER.info("\n\nSend message from user service to notification service" +
+                "(topic = usersTopicSendEmail): {} \n\n", newMessage);
         kafkaTemplate.send("usersTopicSendEmail", newMessage);
+    }
+
+    // send user's id
+    public void returnUsersId(String message) {
+        LOGGER.info("\n\nSend message from user service to project service" +
+                "(topic = usersTopicReturnId): " + message + "\n\n");
+        kafkaTemplate.send("usersTopicReturnId", message);
     }
 }

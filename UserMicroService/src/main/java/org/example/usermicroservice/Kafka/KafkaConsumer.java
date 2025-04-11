@@ -45,4 +45,19 @@ public class KafkaConsumer {
 
         kafkaProducer.sendMessageToNotification(newMessage);
     }
+
+    @KafkaListener(topics = "projectTopicOwnersId", groupId = "ProjectGroup")
+    public void getUsersUsernameAndReturningId(String message) {
+        LOGGER.info("\n\nReceived message from project service(topic = projectTopicOwnersId): {} \n\n", message);
+        Map<String, String> map = parseMessage(message);
+        String requestId = map.get("requestId");
+        String username = map.get("username");
+
+        User user = userRepository.findUserByUsername(username).orElse(null);
+        assert user != null;
+        int id = user.getId();
+
+        String returnMessage = "requestId: " + requestId + ", id: " + id;
+        kafkaProducer.returnUsersId(returnMessage);
+    }
 }
