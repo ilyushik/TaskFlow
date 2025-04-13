@@ -23,4 +23,12 @@ public class TaskStatus {
 
     @OneToMany(mappedBy = "status")
     private List<Task> tasks;
+
+    @Override
+    public String toString() {
+        return "TaskStatus{" +
+                "id=" + id +
+                ", status='" + status + '\'' +
+                '}';
+    }
 }

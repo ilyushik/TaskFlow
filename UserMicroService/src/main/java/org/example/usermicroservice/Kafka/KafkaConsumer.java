@@ -60,4 +60,18 @@ public class KafkaConsumer {
         String returnMessage = "requestId: " + requestId + ", id: " + id;
         kafkaProducer.returnUsersId(returnMessage);
     }
+
+    @KafkaListener(topics = "taskTopicUserIdToSendMessage", groupId = "TaskGroup")
+    public void getUserIdToSendNotification(String message) {
+        LOGGER.info("\n\nReceived data from task service(topic = taskTopicUserIdToSendMessage): {} \n\n", message);
+        Map<String, String> map = parseMessage(message);
+        int id = Integer.parseInt(map.get("id"));
+        String title = map.get("title");
+
+        User user = userRepository.findById(id).orElse(null);
+
+        assert user != null;
+        String newMessage = "email: " + user.getEmail() + ", title: " + title + ", userId: " + id;
+        kafkaProducer.sendMessageToNotification(newMessage);
+    }
 }

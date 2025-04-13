@@ -33,4 +33,14 @@ public class KafkaProducer {
         kafkaTemplate.send("taskTopicCheckDeadline", message);
     }
 
+    public void sendRequestToGetProjectsDeadlineById(String message) {
+        logger.info("\n\nSend data from task service to project service" +
+                "(topic = taskTopicCheckDeadlineId): " + message + "\n\n");
+        kafkaTemplate.send("taskTopicCheckDeadlineId", message);
+    }
+
+    public void sendRequestToSendNotificationToUser(String message) {
+        kafkaTemplate.send("taskTopicUserIdToSendMessage", message);
+    }
+
 }

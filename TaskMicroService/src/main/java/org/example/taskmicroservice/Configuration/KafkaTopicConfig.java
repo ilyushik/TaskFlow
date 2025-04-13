@@ -27,4 +27,14 @@ public class KafkaTopicConfig {
     public NewTopic taskTopicCheckDeadline() {
         return new NewTopic("taskTopicCheckDeadline", 1, (short) 1);
     }
+
+    // check task's and project's deadline by id
+    @Bean
+    public NewTopic taskTopicCheckDeadlineById() {
+        return new NewTopic("taskTopicCheckDeadlineId", 1, (short) 1);
+    }
+
+    @Bean NewTopic taskTopicUserIdToSendMessage() {
+        return new NewTopic("taskTopicUserIdToSendMessage", 1, (short) 1);
+    }
 }

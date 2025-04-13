@@ -37,4 +37,9 @@ public class KafkaTopicConfig {
     public NewTopic projectTopicProjectsDeadline() {
         return new NewTopic("projectTopicProjectsDeadline", 1, (short) 1);
     }
+
+    @Bean
+    public NewTopic projectTopicProjectsDeadlineById() {
+        return new NewTopic("projectTopicProjectsDeadlineById", 1, (short) 1);
+    }
 }

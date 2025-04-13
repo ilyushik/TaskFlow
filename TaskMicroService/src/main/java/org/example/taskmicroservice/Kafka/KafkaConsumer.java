@@ -6,10 +6,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
-import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -123,6 +121,39 @@ public class KafkaConsumer {
     public void handleProjectsDeadline(String message) throws ParseException {
         logger.info("\n\nReceived data from project service" +
                 "(topic = projectTopicProjectsDeadline): " + message + "\n\n");
+        Map<String, String> data = parseMessage(message);
+        String requestId = data.get("requestId");
+        String deadline = data.get("projectsDeadline");
+
+        String[] deadlineSplit = deadline.split("-");
+        logger.info("\n\nParsed deadline: " + deadlineSplit[0] + "-" + deadlineSplit[1] +
+                "-" + deadlineSplit[2] + "\n\n");
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        Date newDate = formatter.parse(deadline);
+
+        CompletableFuture<Date> future = projectsDeadline.get(requestId);
+        if (future != null) {
+            future.complete(newDate);
+        }
+    }
+
+    public Date getProjectsDeadlineById(int id) throws ExecutionException,
+            InterruptedException, TimeoutException {
+        String requestId = UUID.randomUUID().toString();
+        String message = "requestId: " + requestId + ", id: " + id;
+
+        CompletableFuture<Date> future = new CompletableFuture<>();
+        projectsDeadline.put(requestId, future);
+
+        kafkaProducer.sendRequestToGetProjectsDeadlineById(message);
+
+        return future.get(5, TimeUnit.SECONDS);
+    }
+
+    @KafkaListener(topics = "projectTopicProjectsDeadlineById", groupId = "ProjectService")
+    public void handleProjectsDeadlineById(String message) throws ParseException {
+        logger.info("\n\nReceived data from project service" +
+                "(topic = projectTopicProjectsDeadlineById): " + message + "\n\n");
         Map<String, String> data = parseMessage(message);
         String requestId = data.get("requestId");
         String deadline = data.get("projectsDeadline");

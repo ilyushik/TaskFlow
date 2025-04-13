@@ -117,4 +117,19 @@ public class KafkaConsumer {
 
         kafkaProducer.sendProjectsDeadline(newMessage);
     }
+
+    @KafkaListener(topics = "taskTopicCheckDeadlineId", groupId = "TaskGroup")
+    public void handleTasksReturnDeadlineById(String message) {
+        logger.info("\n\nReceived data from task service" +
+                "(topic = taskTopicCheckDeadlineId): " + message + "\n\n");
+        Map<String, String> data = parseMessage(message);
+        String requestId = data.get("requestId");
+        int id = Integer.parseInt(data.get("id"));
+
+        Project project = projectRepository.findById(id).orElse(null);
+        assert project != null;
+        String newMessage = "requestId: " + requestId + ", projectsDeadline: " + project.getDeadline();
+
+        kafkaProducer.sendProjectsDeadlineById(newMessage);
+    }
 }
