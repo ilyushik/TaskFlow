@@ -1,5 +1,6 @@
 package org.example.authmicroservice.Controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.example.authmicroservice.DTO.AuthRequest;
 import org.example.authmicroservice.DTO.AuthResponse;
@@ -19,6 +20,7 @@ import java.util.Collections;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
+@Tag(name = "User", description = "Operations related to users")
 public class AuthController {
 
     private final AuthService authService;
