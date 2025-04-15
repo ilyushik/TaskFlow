@@ -1,5 +1,6 @@
 package org.example.projectmicroservice.Controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.example.projectmicroservice.Kafka.KafkaConsumer;
 import org.example.projectmicroservice.Model.Project;
@@ -18,6 +19,7 @@ import java.util.concurrent.TimeoutException;
 @RestController
 @RequestMapping("/api/project")
 @RequiredArgsConstructor
+@Tag(name = "Project", description = "Operations related to projects")
 public class ProjectController {
 
     private final KafkaConsumer kafkaConsumer;

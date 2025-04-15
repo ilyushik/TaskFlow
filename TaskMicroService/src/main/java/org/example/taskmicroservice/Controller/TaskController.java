@@ -1,5 +1,6 @@
 package org.example.taskmicroservice.Controller;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.example.taskmicroservice.DTO.AddTaskDTO;
 import org.example.taskmicroservice.DTO.UpdateTaskDTO;
@@ -21,6 +22,7 @@ import java.util.concurrent.TimeoutException;
 @RestController
 @RequestMapping("/api/task")
 @RequiredArgsConstructor
+@Tag(name = "Task", description = "Operations related to tasks")
 public class TaskController {
 
     private final TaskService taskService;
