@@ -35,6 +35,7 @@ public class Task {
     @Column(name = "priority")
     private int priority;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @Column(name = "due_date")
     private Date dueDate;
 

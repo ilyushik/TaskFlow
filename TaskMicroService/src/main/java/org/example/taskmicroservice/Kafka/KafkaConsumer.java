@@ -28,6 +28,8 @@ public class KafkaConsumer {
             pendingResponsesExistsProjectWithId = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, CompletableFuture<Date>> projectsDeadline =
             new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, CompletableFuture<Integer>> pendingResponsesUserId =
+            new ConcurrentHashMap<>();
 
     private Map<String, String> parseMessage(String message) {
         Map<String, String> result = new HashMap<>();
@@ -167,6 +169,32 @@ public class KafkaConsumer {
         CompletableFuture<Date> future = projectsDeadline.get(requestId);
         if (future != null) {
             future.complete(newDate);
+        }
+    }
+
+    public int getUserId(String userName) throws ExecutionException, InterruptedException {
+        String requestId = UUID.randomUUID().toString();
+        String message = "requestId: " + requestId + ", userName: " + userName;
+
+        CompletableFuture<Integer> future = new CompletableFuture<>();
+        pendingResponsesUserId.put(requestId, future);
+
+        kafkaProducer.sendRequestToGetUserId(message);
+
+        return future.get();
+    }
+
+    @KafkaListener(topics = "usersTopicReturnIdToTask", groupId = "UserGroup")
+    public void handleUsersReturnIdToTask(String message) throws ParseException {
+        logger.info("\n\nReceived data from UserService" + message + "\n\n");
+
+        Map<String, String> data = parseMessage(message);
+        String requestId = data.get("requestId");
+        int id = Integer.parseInt(data.get("id"));
+
+        CompletableFuture<Integer> future = pendingResponsesUserId.get(requestId);
+        if (future != null) {
+            future.complete(id);
         }
     }
 }

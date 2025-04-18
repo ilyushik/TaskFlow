@@ -17,4 +17,19 @@ public class KafkaTopicConfig {
     public NewTopic usersTopicReturnId() {
         return new NewTopic("usersTopicReturnId", 1, (short) 1);
     }
+
+    @Bean
+    public NewTopic usersTopicReturnIdToTask() {
+        return new NewTopic("usersTopicReturnIdToTask", 1, (short) 1);
+    }
+
+    @Bean
+    public NewTopic usersTopicGetProjectOwnerId() {
+        return new NewTopic("usersTopicGetProjectOwnerId", 1, (short) 1);
+    }
+
+    @Bean
+    public NewTopic usersTopicSendEmailAboutFinishedTask() {
+        return new NewTopic("usersTopicSendEmailAboutFinishedTask", 1, (short) 1);
+    }
 }

@@ -132,4 +132,19 @@ public class KafkaConsumer {
 
         kafkaProducer.sendProjectsDeadlineById(newMessage);
     }
+
+    @KafkaListener(topics = "usersTopicGetProjectOwnerId", groupId = "UserGroup")
+    public void returnProjectOwner(String message) {
+        logger.info("\n\nReceived from user service(topic = usersTopicGetProjectOwnerId): " + message + "\n\n");
+        Map<String, String> data = parseMessage(message);
+        String requestId = data.get("requestId");
+        int id = Integer.parseInt(data.get("projectId"));
+
+        Project project = projectRepository.findById(id).orElse(null);
+        assert project != null;
+        int ownerId = project.getOwnerId();
+
+        String newMessage = "requestId: " + requestId + ", ownerId: " + ownerId + ", projectName: "  + project.getName();
+        kafkaProducer.sendOwnerId(newMessage);
+    }
 }

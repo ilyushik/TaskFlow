@@ -43,4 +43,15 @@ public class KafkaProducer {
         kafkaTemplate.send("taskTopicUserIdToSendMessage", message);
     }
 
+    public void sendRequestToGetUserId(String message) {
+        logger.info("\n\nSend data from task service to user service" +
+                "(topic = taskTopicGetUserId): " + message + "\n\n");
+        kafkaTemplate.send("taskTopicGetUserId", message);
+    }
+
+    public void sendMessageAboutFinishedTask(String message) {
+        logger.info("\n\nSend data from task service to user service" +
+                "(topic = taskTopicFinishedTask): " + message + "\n\n");
+        kafkaTemplate.send("taskTopicFinishedTask", message);
+    }
 }

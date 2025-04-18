@@ -37,4 +37,13 @@ public class KafkaTopicConfig {
     @Bean NewTopic taskTopicUserIdToSendMessage() {
         return new NewTopic("taskTopicUserIdToSendMessage", 1, (short) 1);
     }
+
+    // topic to get user's id
+    @Bean NewTopic taskTopicGetUserId() {
+        return new NewTopic("taskTopicGetUserId", 1, (short) 1);
+    }
+
+    @Bean NewTopic taskTopicFinishedTask() {
+        return new NewTopic("taskTopicFinishedTask", 1, (short) 1);
+    }
 }

@@ -46,4 +46,17 @@ public class KafkaConsumer {
 
         //save template to db
     }
+
+    @KafkaListener(topics = "usersTopicSendEmailAboutFinishedTask", groupId = "UserGroup")
+    public void emailRequestAboutFinishedTask(String message) {
+        logger.info("\n\nReceived message from user service(topic = usersTopicSendEmailAboutFinishedTask): {} \n\n", message);
+        Map<String, String> map = parseMessage(message);
+        int taskId = Integer.parseInt(map.get("taskId"));
+        String projectName = map.get("projectName");
+        String userName = map.get("userName");
+        String ownerEmail = map.get("ownerEmail");
+        MailStructure mailStructure = new MailStructure("Info about task", userName +
+                " has finished the task " + taskId + " from " + projectName);
+        mailService.sendMail(ownerEmail, mailStructure);
+    }
 }

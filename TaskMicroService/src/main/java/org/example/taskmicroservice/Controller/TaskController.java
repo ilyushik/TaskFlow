@@ -3,6 +3,7 @@ package org.example.taskmicroservice.Controller;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.example.taskmicroservice.DTO.AddTaskDTO;
+import org.example.taskmicroservice.DTO.TaskDTO;
 import org.example.taskmicroservice.DTO.UpdateTaskDTO;
 import org.example.taskmicroservice.Kafka.KafkaConsumer;
 import org.example.taskmicroservice.Model.Task;
@@ -12,6 +13,8 @@ import org.example.taskmicroservice.Service.TaskService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
@@ -47,13 +50,13 @@ public class TaskController {
     public ResponseEntity<?> addTask(@RequestBody AddTaskDTO addTaskDTO) throws ExecutionException,
             InterruptedException, TimeoutException {
         int projectId = kafkaConsumer.resolveProjectId(addTaskDTO.getProjectName());
-        List<Task> tasksByProject = taskService.tasksByProjectId(projectId);
-        if (!tasksByProject.stream().filter(t -> t.getTitle()
+        List<TaskDTO> tasksByProject = taskService.tasksByProjectId(projectId);
+        if (!tasksByProject.stream().filter(t -> t.title()
                 .equals(addTaskDTO.getTitle())).toList().isEmpty()) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("title",
                     "The task with such title already exists"));
         }
-        if (!tasksByProject.stream().filter(t -> t.getDescription()
+        if (!tasksByProject.stream().filter(t -> t.description()
                 .equals(addTaskDTO.getDescription())).toList().isEmpty()) {
             return ResponseEntity
                     .badRequest().body(Collections.singletonMap("description",
@@ -90,14 +93,14 @@ public class TaskController {
             InterruptedException, TimeoutException {
         Task task = taskService.findTaskById(id);
         int projectId = task.getProjectId();
-        List<Task> tasksByProject = taskService.tasksByProjectId(projectId);
-        if (!tasksByProject.stream().filter(t -> t.getTitle()
-                .equals(updateTaskDTO.getTitle()) && t.getId() != id).toList().isEmpty()) {
+        List<TaskDTO> tasksByProject = taskService.tasksByProjectId(projectId);
+        if (!tasksByProject.stream().filter(t -> t.title()
+                .equals(updateTaskDTO.getTitle()) && t.id() != id).toList().isEmpty()) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("title",
                     "The task with such title already exists"));
         }
-        if (!tasksByProject.stream().filter(t -> t.getDescription()
-                .equals(updateTaskDTO.getDescription()) && t.getId() != id).toList().isEmpty()) {
+        if (!tasksByProject.stream().filter(t -> t.description()
+                .equals(updateTaskDTO.getDescription()) && t.id() != id).toList().isEmpty()) {
             return ResponseEntity
                     .badRequest().body(Collections.singletonMap("description",
                             "The task with such description already exists"));
@@ -110,5 +113,20 @@ public class TaskController {
         }
 
         return ResponseEntity.ok(taskService.updateTask(id, updateTaskDTO));
+    }
+
+    @GetMapping("/takeTask/{id}")
+    public ResponseEntity<?> takeTask(@PathVariable("id") int id) throws ExecutionException,
+            InterruptedException {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        int userId = kafkaConsumer.getUserId(username);
+
+        return ResponseEntity.ok(taskService.takeTask(userId, id));
+    }
+
+    @GetMapping("/finishTask/{id}")
+    public ResponseEntity<?> finishTask(@PathVariable("id") int id) {
+        return ResponseEntity.ok(taskService.finishTask(id));
     }
 }

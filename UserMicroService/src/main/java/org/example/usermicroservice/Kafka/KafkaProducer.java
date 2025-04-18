@@ -27,4 +27,25 @@ public class KafkaProducer {
                 "(topic = usersTopicReturnId): " + message + "\n\n");
         kafkaTemplate.send("usersTopicReturnId", message);
     }
+
+    // send user's id to task service
+    public void sendIdToTask(String message) {
+        LOGGER.info("\n\nSend message from user service to task service" +
+                "(topic = usersTopicReturnIdToTask): " + message + "\n\n");
+        kafkaTemplate.send("usersTopicReturnIdToTask", message);
+    }
+
+    // send project's id to project service to get owner's id
+    public void sendProjectId(String message) {
+        LOGGER.info("\n\nSend message from user service to project service" +
+                "(topic = usersTopicGetProjectOwnerId): " + message + "\n\n");
+        kafkaTemplate.send("usersTopicGetProjectOwnerId", message);
+    }
+
+    // send email about finished task
+    public void sendEmailAboutTask(String message) {
+        LOGGER.info("\n\nSend message from user service to notification service" +
+                "(topic = usersTopicSendEmailAboutFinishedTask): " + message + "\n\n");
+        kafkaTemplate.send("usersTopicSendEmailAboutFinishedTask", message);
+    }
 }

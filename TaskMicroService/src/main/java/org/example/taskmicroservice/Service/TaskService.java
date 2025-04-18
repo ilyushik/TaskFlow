@@ -1,6 +1,7 @@
 package org.example.taskmicroservice.Service;
 
 import lombok.RequiredArgsConstructor;
+import org.example.taskmicroservice.DTO.TaskDTO;
 import org.example.taskmicroservice.DTO.UpdateTaskDTO;
 import org.example.taskmicroservice.Kafka.KafkaProducer;
 import org.example.taskmicroservice.Model.Task;
@@ -25,6 +26,17 @@ public class TaskService {
     private final TaskStatusRepository taskStatusRepository;
     private final KafkaProducer kafkaProducer;
 
+
+    private TaskDTO taskToTaskDTOMapper(Task task) {
+        return new TaskDTO(task.getId(), task.getTitle(),
+                task.getDescription(), task.getStatus().getStatus(),
+                task.getDueDate(), task.getProjectId(),
+                task.getAssignedUserId(), task.getCreatedAt(),
+                task.getUpdatedAt());
+    }
+
+
+
     public Task findTaskById(int id) {
         return taskRepository.findById(id).orElse(null);
     }
@@ -40,9 +52,10 @@ public class TaskService {
         return "success";
     }
 
-    public List<Task> tasksByProjectId(int projectId) {
+    public List<TaskDTO> tasksByProjectId(int projectId) {
         return taskRepository.findAll().stream()
-                .filter(t -> t.getProjectId() == projectId).toList();
+                .filter(t -> t.getProjectId() == projectId)
+                .map(this::taskToTaskDTOMapper).toList();
     }
 
     public String deleteTask(int id) {
@@ -51,7 +64,7 @@ public class TaskService {
         return "success";
     }
 
-    public Task updateTask(int id, UpdateTaskDTO task) {
+    public TaskDTO updateTask(int id, UpdateTaskDTO task) {
         TaskStatus status = taskStatusRepository.findByStatus(task.getStatus());
 
         Task updatedTask = taskRepository.findById(id).orElse(null);
@@ -76,6 +89,37 @@ public class TaskService {
             kafkaProducer.sendRequestToSendNotificationToUser(message);
         }
 
-        return updatedTask;
+        return taskToTaskDTOMapper(updatedTask);
+    }
+
+    public TaskDTO takeTask(int userId, int taskId) {
+        Task task = taskRepository.findById(taskId).orElse(null);
+        TaskStatus status = taskStatusRepository.findByStatus("IN PROGRESS");
+        assert task != null;
+        task.setAssignedUserId(userId);
+        task.setStatus(status);
+        task.setUpdatedAt(Timestamp.from(Instant.now()));
+        Task updatedTask = taskRepository.save(task);
+        return taskToTaskDTOMapper(updatedTask);
+    }
+
+    public TaskDTO finishTask(int taskId) {
+        Task task = taskRepository.findById(taskId).orElse(null);
+        TaskStatus status = taskStatusRepository.findByStatus("DONE");
+        assert task != null;
+        task.setStatus(status);
+        task.setUpdatedAt(Timestamp.from(Instant.now()));
+
+        // sending message to project's owner that task has been done
+        String message = "taskId: " + taskId + ", projectId: " +
+                task.getProjectId() + ", userId: " +
+                task.getAssignedUserId();
+
+        // send to User service
+        kafkaProducer.sendMessageAboutFinishedTask(message);
+
+        Task updatedTask = taskRepository.save(task);
+
+        return taskToTaskDTOMapper(updatedTask);
     }
 }

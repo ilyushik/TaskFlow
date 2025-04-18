@@ -54,4 +54,10 @@ public class KafkaProducer {
                 "(topic = projectTopicProjectsDeadlineById): " + message + "\n\n");
         kafkaTemplate.send("projectTopicProjectsDeadlineById", message);
     }
+
+    public void sendOwnerId(String message) {
+        logger.info("\n\nSend data from project service to user service" +
+                "(topic = projectTopicReturnOwnerId): " + message + "\n\n");
+        kafkaTemplate.send("projectTopicReturnOwnerId", message);
+    }
 }
