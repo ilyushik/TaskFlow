@@ -1,5 +1,6 @@
 package org.example.taskmicroservice.Controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.example.taskmicroservice.DTO.AddTaskDTO;
@@ -34,6 +35,7 @@ public class TaskController {
 
     private static final Logger logger = LoggerFactory.getLogger(TaskController.class);
 
+    @Operation(summary = "Find tasks by project")
     @GetMapping("/{projectId}")
     public ResponseEntity<?> tasksByProject(@PathVariable("projectId") int id)
             throws ExecutionException,
@@ -46,38 +48,40 @@ public class TaskController {
         return ResponseEntity.ok(taskService.tasksByProjectId(id));
     }
 
+    @Operation(summary = "Add task")
     @PostMapping("/addTask")
     public ResponseEntity<?> addTask(@RequestBody AddTaskDTO addTaskDTO) throws ExecutionException,
             InterruptedException, TimeoutException {
-        int projectId = kafkaConsumer.resolveProjectId(addTaskDTO.getProjectName());
+        int projectId = kafkaConsumer.resolveProjectId(addTaskDTO.projectName());
         List<TaskDTO> tasksByProject = taskService.tasksByProjectId(projectId);
         if (!tasksByProject.stream().filter(t -> t.title()
-                .equals(addTaskDTO.getTitle())).toList().isEmpty()) {
+                .equals(addTaskDTO.title())).toList().isEmpty()) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("title",
                     "The task with such title already exists"));
         }
         if (!tasksByProject.stream().filter(t -> t.description()
-                .equals(addTaskDTO.getDescription())).toList().isEmpty()) {
+                .equals(addTaskDTO.description())).toList().isEmpty()) {
             return ResponseEntity
                     .badRequest().body(Collections.singletonMap("description",
                             "The task with such description already exists"));
         }
 
-        if (kafkaConsumer.getProjectsDeadline(addTaskDTO.getProjectName())
-                .before(addTaskDTO.getDueDate())) {
+        if (kafkaConsumer.getProjectsDeadline(addTaskDTO.projectName())
+                .before(addTaskDTO.dueDate())) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("dueDate",
                     "Deadline of task can not be after project's deadline"));
         }
 
         TaskStatus status = taskStatusRepository.findByStatus("TO DO");
-        Task newTask = new Task(addTaskDTO.getTitle(), addTaskDTO.getDescription(), status,
-                addTaskDTO.getPriority(),
-                addTaskDTO.getDueDate(), projectId, addTaskDTO.getAssignedUserId() != null ?
-                addTaskDTO.getAssignedUserId() : null);
+        Task newTask = new Task(addTaskDTO.title(), addTaskDTO.description(), status,
+                addTaskDTO.priority(),
+                addTaskDTO.dueDate(), projectId, addTaskDTO.assignedUserId() != null ?
+                addTaskDTO.assignedUserId() : null);
 
         return ResponseEntity.ok(taskService.addTask(newTask));
     }
 
+    @Operation(summary = "Delete task")
     @DeleteMapping("/deleteTask/{id}")
     public ResponseEntity<?> deleteTask(@PathVariable("id") int id) {
         Task task = taskService.findTaskById(id);
@@ -87,6 +91,7 @@ public class TaskController {
         return ResponseEntity.ok(taskService.deleteTask(id));
     }
 
+    @Operation(summary = "Update task")
     @PutMapping("/updateTask/{id}")
     public ResponseEntity<?> updateTask(@RequestBody UpdateTaskDTO updateTaskDTO,
                                         @PathVariable("id") int id) throws ExecutionException,
@@ -95,19 +100,19 @@ public class TaskController {
         int projectId = task.getProjectId();
         List<TaskDTO> tasksByProject = taskService.tasksByProjectId(projectId);
         if (!tasksByProject.stream().filter(t -> t.title()
-                .equals(updateTaskDTO.getTitle()) && t.id() != id).toList().isEmpty()) {
+                .equals(updateTaskDTO.title()) && t.id() != id).toList().isEmpty()) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("title",
                     "The task with such title already exists"));
         }
         if (!tasksByProject.stream().filter(t -> t.description()
-                .equals(updateTaskDTO.getDescription()) && t.id() != id).toList().isEmpty()) {
+                .equals(updateTaskDTO.description()) && t.id() != id).toList().isEmpty()) {
             return ResponseEntity
                     .badRequest().body(Collections.singletonMap("description",
                             "The task with such description already exists"));
         }
 
         if (kafkaConsumer.getProjectsDeadlineById(projectId)
-                .before(updateTaskDTO.getDueDate())) {
+                .before(updateTaskDTO.dueDate())) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("dueDate",
                     "Deadline of task can not be after project's deadline"));
         }
@@ -115,6 +120,7 @@ public class TaskController {
         return ResponseEntity.ok(taskService.updateTask(id, updateTaskDTO));
     }
 
+    @Operation(summary = "Take task")
     @GetMapping("/takeTask/{id}")
     public ResponseEntity<?> takeTask(@PathVariable("id") int id) throws ExecutionException,
             InterruptedException {
@@ -125,6 +131,7 @@ public class TaskController {
         return ResponseEntity.ok(taskService.takeTask(userId, id));
     }
 
+    @Operation(summary = "Finish task")
     @GetMapping("/finishTask/{id}")
     public ResponseEntity<?> finishTask(@PathVariable("id") int id) {
         return ResponseEntity.ok(taskService.finishTask(id));

@@ -1,5 +1,6 @@
 package org.example.authmicroservice.Controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.example.authmicroservice.DTO.AuthRequest;
@@ -20,13 +21,14 @@ import java.util.Collections;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
-@Tag(name = "User", description = "Operations related to users")
+@Tag(name = "Auth", description = "Operations related to authentication")
 public class AuthController {
 
     private final AuthService authService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @Operation(summary = "Registration")
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         if (request.getUsername().isEmpty()) {
@@ -49,6 +51,7 @@ public class AuthController {
         return ResponseEntity.ok(new AuthResponse(token));
     }
 
+    @Operation(summary = "Login")
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest request) {
         User user = userRepository.findUserByUsername(request.getUsername()).orElse(null);

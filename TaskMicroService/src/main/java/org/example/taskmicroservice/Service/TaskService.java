@@ -65,25 +65,25 @@ public class TaskService {
     }
 
     public TaskDTO updateTask(int id, UpdateTaskDTO task) {
-        TaskStatus status = taskStatusRepository.findByStatus(task.getStatus());
+        TaskStatus status = taskStatusRepository.findByStatus(task.status());
 
         Task updatedTask = taskRepository.findById(id).orElse(null);
 
         assert updatedTask != null;
         Integer oldUsersId = updatedTask.getAssignedUserId();
-        updatedTask.setTitle(task.getTitle());
-        updatedTask.setDescription(task.getDescription());
+        updatedTask.setTitle(task.title());
+        updatedTask.setDescription(task.description());
         updatedTask.setStatus(status);
-        updatedTask.setPriority(task.getPriority());
-        updatedTask.setDueDate(task.getDueDate());
-        updatedTask.setAssignedUserId(task.getAssignedUserId());
+        updatedTask.setPriority(task.priority());
+        updatedTask.setDueDate(task.dueDate());
+        updatedTask.setAssignedUserId(task.assignedUserId());
         updatedTask.setUpdatedAt(Timestamp.from(Instant.now()));
 
         log.info("\n\nTask updated: " + updatedTask.toString() + "\n\n");
         taskRepository.save(updatedTask);
 
-        if (updatedTask.getAssignedUserId() != null && task.getAssignedUserId() != oldUsersId) {
-            String message = "id: " + task.getAssignedUserId() + ", title: " + "You have been assigned a task";
+        if (updatedTask.getAssignedUserId() != null && task.assignedUserId() != oldUsersId) {
+            String message = "id: " + task.assignedUserId() + ", title: " + "You have been assigned a task";
             log.info("\n\nSend data from task service to user service" +
                     "(topic = taskTopicUserIdToSendMessage): " + message + "\n\n");
             kafkaProducer.sendRequestToSendNotificationToUser(message);
