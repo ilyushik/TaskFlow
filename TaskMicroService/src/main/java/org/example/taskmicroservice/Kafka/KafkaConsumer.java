@@ -68,11 +68,13 @@ public class KafkaConsumer {
         Map<String, String> data = parseMessage(message);
         String requestId = data.get("requestId");
         int id = Integer.parseInt(data.get("id"));
+        logger.info("\n\nRequestId: " + requestId + ", id: " + id + "\n\n");
 
         CompletableFuture<Integer> future = pendingResponses.remove(requestId);
 
         if (future != null) {
             future.complete(id);
+            logger.info("\n\nFuture complete success " + "\n\n");
         }
     }
 

@@ -10,6 +10,10 @@ import org.example.taskmicroservice.Repository.TaskRepository;
 import org.example.taskmicroservice.Repository.TaskStatusRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
@@ -27,7 +31,7 @@ public class TaskService {
     private final KafkaProducer kafkaProducer;
 
 
-    private TaskDTO taskToTaskDTOMapper(Task task) {
+    public TaskDTO taskToTaskDTOMapper(Task task) {
         return new TaskDTO(task.getId(), task.getTitle(),
                 task.getDescription(), task.getStatus().getStatus(),
                 task.getDueDate(), task.getProjectId(),
@@ -37,34 +41,46 @@ public class TaskService {
 
 
 
+    @Cacheable(value = "task", key = "#id")
     public Task findTaskById(int id) {
         return taskRepository.findById(id).orElse(null);
     }
 
-    public String addTask(Task task) {
+    @CacheEvict(value = "tasksList", key = "'tasksByProjectId' + #task.projectId")
+    @CachePut(value = "task", key = "#result.getId()")
+    public Task addTask(Task task) {
         if (task.getAssignedUserId() != null) {
             String message = "id: " + task.getAssignedUserId() + ", title: " + "You have been assigned a task";
             log.info("\n\nSend data from task service to user service" +
                     "(topic = taskTopicUserIdToSendMessage): " + message + "\n\n");
             kafkaProducer.sendRequestToSendNotificationToUser(message);
         }
-        taskRepository.save(task);
+        return taskRepository.save(task);
+    }
+
+    @Cacheable(value = "tasksList", key = "'tasksByProjectId' + #projectId")
+    public List<Task> tasksByProjectId(int projectId) {
+        return taskRepository.findByProjectId(projectId);
+    }
+
+    @Caching(evict = {
+            @CacheEvict(value = "tasksList", key = "'tasksByProjectId' + #task.projectId"),
+            @CacheEvict(value = "task", key = "#task.id")
+    })
+    public String deleteTask(Task task) {
+        taskRepository.delete(task);
         return "success";
     }
 
-    public List<TaskDTO> tasksByProjectId(int projectId) {
-        return taskRepository.findAll().stream()
-                .filter(t -> t.getProjectId() == projectId)
-                .map(this::taskToTaskDTOMapper).toList();
-    }
 
-    public String deleteTask(int id) {
-        taskRepository.deleteById(id);
-        log.info("\n\nTask with id {} deleted \n\n", id);
-        return "success";
-    }
-
-    public TaskDTO updateTask(int id, UpdateTaskDTO task) {
+    @Caching(evict = {
+            @CacheEvict(value = "tasksList", key = "'tasksByProjectId' + #task.projectId",
+                    condition = "#task.projectId != null"),
+            @CacheEvict(value = "task", key = "#id")
+    }, put = {
+            @CachePut(value = "task", key = "#id")
+    })
+    public Task updateTask(int id, UpdateTaskDTO task) {
         TaskStatus status = taskStatusRepository.findByStatus(task.status());
 
         Task updatedTask = taskRepository.findById(id).orElse(null);
@@ -80,7 +96,7 @@ public class TaskService {
         updatedTask.setUpdatedAt(Timestamp.from(Instant.now()));
 
         log.info("\n\nTask updated: " + updatedTask.toString() + "\n\n");
-        taskRepository.save(updatedTask);
+        Task updatedTask1 = taskRepository.save(updatedTask);
 
         if (updatedTask.getAssignedUserId() != null && task.assignedUserId() != oldUsersId) {
             String message = "id: " + task.assignedUserId() + ", title: " + "You have been assigned a task";
@@ -89,13 +105,18 @@ public class TaskService {
             kafkaProducer.sendRequestToSendNotificationToUser(message);
         }
 
-        return taskToTaskDTOMapper(updatedTask);
+        return updatedTask1;
     }
 
-    public TaskDTO takeTask(int userId, int taskId) {
-        Task task = taskRepository.findById(taskId).orElse(null);
+
+    @Caching(evict = {
+            @CacheEvict(value = "tasksList", key = "'tasksByProjectId' + #task.projectId"),
+            @CacheEvict(value = "task", key = "#task.id")
+    }, put = {
+            @CachePut(value = "task", key = "#task.id")
+    })
+    public TaskDTO takeTask(int userId, Task task) {
         TaskStatus status = taskStatusRepository.findByStatus("IN PROGRESS");
-        assert task != null;
         task.setAssignedUserId(userId);
         task.setStatus(status);
         task.setUpdatedAt(Timestamp.from(Instant.now()));
@@ -103,15 +124,20 @@ public class TaskService {
         return taskToTaskDTOMapper(updatedTask);
     }
 
-    public TaskDTO finishTask(int taskId) {
-        Task task = taskRepository.findById(taskId).orElse(null);
+    @Caching(evict = {
+            @CacheEvict(value = "tasksList", key = "'tasksByProjectId' + #task.projectId"),
+            @CacheEvict(value = "task", key = "#task.id")
+    }, put = {
+            @CachePut(value = "task", key = "#task.id")
+    })
+    public TaskDTO finishTask(Task task) {
         TaskStatus status = taskStatusRepository.findByStatus("DONE");
         assert task != null;
         task.setStatus(status);
         task.setUpdatedAt(Timestamp.from(Instant.now()));
 
         // sending message to project's owner that task has been done
-        String message = "taskId: " + taskId + ", projectId: " +
+        String message = "taskId: " + task.getId() + ", projectId: " +
                 task.getProjectId() + ", userId: " +
                 task.getAssignedUserId();
 

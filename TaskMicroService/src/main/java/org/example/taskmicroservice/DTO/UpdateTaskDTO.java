@@ -8,6 +8,7 @@ public record UpdateTaskDTO (
     int priority,
     Date dueDate,
     Integer assignedUserId,
-    String status
+    String status,
+    Integer projectId
 ) {}
 

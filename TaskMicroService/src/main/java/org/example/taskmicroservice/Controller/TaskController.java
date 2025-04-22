@@ -1,5 +1,6 @@
 package org.example.taskmicroservice.Controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -13,12 +14,15 @@ import org.example.taskmicroservice.Repository.TaskStatusRepository;
 import org.example.taskmicroservice.Service.TaskService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -33,10 +37,14 @@ public class TaskController {
     private final KafkaConsumer kafkaConsumer;
     private final TaskStatusRepository taskStatusRepository;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
+
     private static final Logger logger = LoggerFactory.getLogger(TaskController.class);
 
     @Operation(summary = "Find tasks by project")
-    @GetMapping("/{projectId}")
+    @GetMapping("/project/{projectId}")
     public ResponseEntity<?> tasksByProject(@PathVariable("projectId") int id)
             throws ExecutionException,
             InterruptedException, TimeoutException {
@@ -48,37 +56,63 @@ public class TaskController {
         return ResponseEntity.ok(taskService.tasksByProjectId(id));
     }
 
+    @Operation(summary = "Find task")
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getTask(@PathVariable int id) {
+        return ResponseEntity.ok(taskService.findTaskById(id));
+    }
+
+
     @Operation(summary = "Add task")
     @PostMapping("/addTask")
-    public ResponseEntity<?> addTask(@RequestBody AddTaskDTO addTaskDTO) throws ExecutionException,
-            InterruptedException, TimeoutException {
+    public ResponseEntity<?> addTask(@RequestBody AddTaskDTO addTaskDTO) throws
+            ExecutionException, InterruptedException, TimeoutException {
         int projectId = kafkaConsumer.resolveProjectId(addTaskDTO.projectName());
-        List<TaskDTO> tasksByProject = taskService.tasksByProjectId(projectId);
-        if (!tasksByProject.stream().filter(t -> t.title()
-                .equals(addTaskDTO.title())).toList().isEmpty()) {
+
+        TaskStatus status = taskStatusRepository.findByStatus("TO DO");
+
+        Task taskFromDTO = new Task(addTaskDTO.title(), addTaskDTO.description(), status,
+                addTaskDTO.priority(),
+                addTaskDTO.dueDate(), projectId, addTaskDTO.assignedUserId());
+        List<Task> tasksByProject = taskService.tasksByProjectId(projectId);
+
+        List<Task> fixedList = new ArrayList<>();
+
+        for (Object obj : tasksByProject) {
+            if (obj instanceof Task) {
+                fixedList.add((Task) obj);
+            } else if (obj instanceof LinkedHashMap) {
+                Task task = objectMapper.convertValue(obj, Task.class);
+                fixedList.add(task);
+            } else {
+                // лог на случай неожиданного типа
+                System.out.println("Unexpected type: " + obj.getClass());
+            }
+        }
+
+
+        if (!fixedList.stream().filter(t -> t.getTitle()
+                .equals(taskFromDTO.getTitle())).toList().isEmpty()) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("title",
                     "The task with such title already exists"));
         }
-        if (!tasksByProject.stream().filter(t -> t.description()
-                .equals(addTaskDTO.description())).toList().isEmpty()) {
+        if (!fixedList.stream().filter(t -> t.getDescription()
+                .equals(taskFromDTO.getDescription())).toList().isEmpty()) {
             return ResponseEntity
                     .badRequest().body(Collections.singletonMap("description",
                             "The task with such description already exists"));
         }
 
         if (kafkaConsumer.getProjectsDeadline(addTaskDTO.projectName())
-                .before(addTaskDTO.dueDate())) {
+                .before(taskFromDTO.getDueDate())) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("dueDate",
                     "Deadline of task can not be after project's deadline"));
         }
 
-        TaskStatus status = taskStatusRepository.findByStatus("TO DO");
-        Task newTask = new Task(addTaskDTO.title(), addTaskDTO.description(), status,
-                addTaskDTO.priority(),
-                addTaskDTO.dueDate(), projectId, addTaskDTO.assignedUserId() != null ?
-                addTaskDTO.assignedUserId() : null);
+        Task saved = taskService.addTask(taskFromDTO);
+        TaskDTO dto = taskService.taskToTaskDTOMapper(saved);
+        return ResponseEntity.ok(dto);
 
-        return ResponseEntity.ok(taskService.addTask(newTask));
     }
 
     @Operation(summary = "Delete task")
@@ -88,7 +122,7 @@ public class TaskController {
         if (task == null) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Task not found"));
         }
-        return ResponseEntity.ok(taskService.deleteTask(id));
+        return ResponseEntity.ok(taskService.deleteTask(task));
     }
 
     @Operation(summary = "Update task")
@@ -98,21 +132,41 @@ public class TaskController {
             InterruptedException, TimeoutException {
         Task task = taskService.findTaskById(id);
         int projectId = task.getProjectId();
-        List<TaskDTO> tasksByProject = taskService.tasksByProjectId(projectId);
-        if (!tasksByProject.stream().filter(t -> t.title()
-                .equals(updateTaskDTO.title()) && t.id() != id).toList().isEmpty()) {
+
+        TaskStatus status = taskStatusRepository.findByStatus(updateTaskDTO.status());
+        Task taskFromDTO = new Task(updateTaskDTO.title(), updateTaskDTO.description(), status,
+                updateTaskDTO.priority(),
+                updateTaskDTO.dueDate(), projectId, updateTaskDTO.assignedUserId());
+        List<Task> tasksByProject = taskService.tasksByProjectId(projectId);
+
+        List<Task> fixedList = new ArrayList<>();
+
+        for (Object obj : tasksByProject) {
+            if (obj instanceof Task) {
+                fixedList.add((Task) obj);
+            } else if (obj instanceof LinkedHashMap) {
+                Task task1 = objectMapper.convertValue(obj, Task.class);
+                fixedList.add(task1);
+            } else {
+                // лог на случай неожиданного типа
+                System.out.println("Unexpected type: " + obj.getClass());
+            }
+        }
+
+        if (!fixedList.stream().filter(t -> t.getTitle()
+                .equals(taskFromDTO.getTitle()) && t.getId() != id).toList().isEmpty()) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("title",
                     "The task with such title already exists"));
         }
-        if (!tasksByProject.stream().filter(t -> t.description()
-                .equals(updateTaskDTO.description()) && t.id() != id).toList().isEmpty()) {
+        if (!fixedList.stream().filter(t -> t.getDescription()
+                .equals(taskFromDTO.getDescription()) && t.getId() != id).toList().isEmpty()) {
             return ResponseEntity
                     .badRequest().body(Collections.singletonMap("description",
                             "The task with such description already exists"));
         }
 
         if (kafkaConsumer.getProjectsDeadlineById(projectId)
-                .before(updateTaskDTO.dueDate())) {
+                .before(taskFromDTO.getDueDate())) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("dueDate",
                     "Deadline of task can not be after project's deadline"));
         }
@@ -128,12 +182,15 @@ public class TaskController {
         String username = auth.getName();
         int userId = kafkaConsumer.getUserId(username);
 
-        return ResponseEntity.ok(taskService.takeTask(userId, id));
+        Task task = taskService.findTaskById(id);
+
+        return ResponseEntity.ok(taskService.takeTask(userId, task));
     }
 
     @Operation(summary = "Finish task")
     @GetMapping("/finishTask/{id}")
     public ResponseEntity<?> finishTask(@PathVariable("id") int id) {
-        return ResponseEntity.ok(taskService.finishTask(id));
+        Task task = taskService.findTaskById(id);
+        return ResponseEntity.ok(taskService.finishTask(task));
     }
 }
