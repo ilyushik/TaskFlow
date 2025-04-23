@@ -1,5 +1,6 @@
 package org.example.projectmicroservice.Controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -7,13 +8,16 @@ import org.example.projectmicroservice.DTO.AddProjectDTO;
 import org.example.projectmicroservice.Kafka.KafkaConsumer;
 import org.example.projectmicroservice.Model.Project;
 import org.example.projectmicroservice.Service.ProjectService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -28,6 +32,29 @@ public class ProjectController {
 
     private final ProjectService projectService;
 
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+
+    private List<Project> parsedList(List<Project> projects) {
+        List<Project> fixedList = new ArrayList<>();
+
+        for (Object obj : projects) {
+            if (obj instanceof Project) {
+                fixedList.add((Project) obj);
+            } else if (obj instanceof LinkedHashMap) {
+                Project project = objectMapper.convertValue(obj, Project.class);
+                fixedList.add(project);
+            } else {
+                // лог на случай неожиданного типа
+                System.err.println("Unexpected type: " + obj.getClass());
+            }
+        }
+
+        return fixedList;
+    }
+
     @Operation(summary = "Get all projects")
     @GetMapping("")
     public ResponseEntity<List<Project>> findAll() {
@@ -38,7 +65,10 @@ public class ProjectController {
     @PostMapping("/createProject")
     public ResponseEntity<?> createProject(@RequestBody AddProjectDTO project)
             throws ExecutionException, InterruptedException, TimeoutException {
-        if (!projectService.projectsByName(project.name()).isEmpty()) {
+
+        Project projectByName = projectService.projectByName(project.name());
+
+        if (projectByName.getName() != null && projectByName.getName().equals(project.name())) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("name",
                     "Project with such name already exists"));
         }

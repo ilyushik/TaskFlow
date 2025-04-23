@@ -41,6 +41,25 @@ public class TaskController {
     private ObjectMapper objectMapper;
 
 
+    private List<Task> parsedList(List<Task> tasks) {
+        List<Task> fixedList = new ArrayList<>();
+
+        for (Object obj : tasks) {
+            if (obj instanceof Task) {
+                fixedList.add((Task) obj);
+            } else if (obj instanceof LinkedHashMap) {
+                Task task = objectMapper.convertValue(obj, Task.class);
+                fixedList.add(task);
+            } else {
+                // лог на случай неожиданного типа
+                System.out.println("Unexpected type: " + obj.getClass());
+            }
+        }
+
+        return fixedList;
+    }
+
+
     private static final Logger logger = LoggerFactory.getLogger(TaskController.class);
 
     @Operation(summary = "Find tasks by project")
@@ -76,19 +95,7 @@ public class TaskController {
                 addTaskDTO.dueDate(), projectId, addTaskDTO.assignedUserId());
         List<Task> tasksByProject = taskService.tasksByProjectId(projectId);
 
-        List<Task> fixedList = new ArrayList<>();
-
-        for (Object obj : tasksByProject) {
-            if (obj instanceof Task) {
-                fixedList.add((Task) obj);
-            } else if (obj instanceof LinkedHashMap) {
-                Task task = objectMapper.convertValue(obj, Task.class);
-                fixedList.add(task);
-            } else {
-                // лог на случай неожиданного типа
-                System.out.println("Unexpected type: " + obj.getClass());
-            }
-        }
+        List<Task> fixedList = parsedList(tasksByProject);
 
 
         if (!fixedList.stream().filter(t -> t.getTitle()
@@ -139,19 +146,7 @@ public class TaskController {
                 updateTaskDTO.dueDate(), projectId, updateTaskDTO.assignedUserId());
         List<Task> tasksByProject = taskService.tasksByProjectId(projectId);
 
-        List<Task> fixedList = new ArrayList<>();
-
-        for (Object obj : tasksByProject) {
-            if (obj instanceof Task) {
-                fixedList.add((Task) obj);
-            } else if (obj instanceof LinkedHashMap) {
-                Task task1 = objectMapper.convertValue(obj, Task.class);
-                fixedList.add(task1);
-            } else {
-                // лог на случай неожиданного типа
-                System.out.println("Unexpected type: " + obj.getClass());
-            }
-        }
+        List<Task> fixedList = parsedList(tasksByProject);
 
         if (!fixedList.stream().filter(t -> t.getTitle()
                 .equals(taskFromDTO.getTitle()) && t.getId() != id).toList().isEmpty()) {
