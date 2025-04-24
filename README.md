@@ -63,7 +63,7 @@ Manages user profiles and account-related information.
 ## 🛠️ Tech Stack
 
 <div align="center">
-  <img height="64" width="64" src="https://cdn.simpleicons.org/Spring/94d31b" title="Spring Boot" />
+  <img height="64" width="64" src="https://cdn.simpleicons.org/springboot/6DB33F" title="Spring Boot" />
   <img height="64" width="64" src="https://cdn.simpleicons.org/mysql/4479A1" title="MySQL" />
   <img height="64" width="64" src="https://cdn.simpleicons.org/amazonwebservices/232F3E" title="AWS" />
   <img height="64" width="64" src="https://cdn.simpleicons.org/apachekafka/231F20" title="Apache Kafka" />
