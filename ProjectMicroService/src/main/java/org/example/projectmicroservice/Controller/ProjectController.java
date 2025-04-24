@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.example.projectmicroservice.DTO.AddProjectDTO;
 import org.example.projectmicroservice.Kafka.KafkaConsumer;
+import org.example.projectmicroservice.Kafka.KafkaProducer;
 import org.example.projectmicroservice.Model.Project;
 import org.example.projectmicroservice.Service.ProjectService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,8 @@ public class ProjectController {
 
     private final ProjectService projectService;
 
+    private final KafkaProducer kafkaProducer;
+
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -53,6 +56,12 @@ public class ProjectController {
         }
 
         return fixedList;
+    }
+
+    @GetMapping("/testCaching")
+    public String sendEmail(@RequestParam String title, @RequestParam int ownerId) {
+        kafkaProducer.sendEmail(ownerId, title);
+        return "Email sent";
     }
 
     @Operation(summary = "Get all projects")

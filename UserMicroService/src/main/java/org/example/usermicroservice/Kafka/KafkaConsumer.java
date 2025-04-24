@@ -3,6 +3,8 @@ package org.example.usermicroservice.Kafka;
 import lombok.RequiredArgsConstructor;
 import org.example.usermicroservice.Model.User;
 import org.example.usermicroservice.Repository.UserRepository;
+import org.example.usermicroservice.Service.UserService;
+import org.example.usermicroservice.UserDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -26,6 +28,8 @@ public class KafkaConsumer {
 
     private final KafkaProducer kafkaProducer;
 
+    private final UserService userService;
+
     private Map<String, String> parseMessage(String message) {
         Map<String, String> map = new HashMap<>();
         String[] messages = message.split(", ");
@@ -44,7 +48,7 @@ public class KafkaConsumer {
         int id = Integer.parseInt(map.get("owner_id"));
         String title = map.get("title");
         LOGGER.info("\n\nId from message: {} \n\n", id);
-        User user = userRepository.findById(id).orElse(null);
+        UserDTO user = userService.findById(id);
         String email = user.getEmail();
 
         String newMessage = "email: " + email + ", title: " + title;
@@ -59,7 +63,7 @@ public class KafkaConsumer {
         String requestId = map.get("requestId");
         String username = map.get("username");
 
-        User user = userRepository.findUserByUsername(username).orElse(null);
+        UserDTO user = userService.findByUsername(username);
         assert user != null;
         int id = user.getId();
 
@@ -74,7 +78,7 @@ public class KafkaConsumer {
         int id = Integer.parseInt(map.get("id"));
         String title = map.get("title");
 
-        User user = userRepository.findById(id).orElse(null);
+        UserDTO user = userService.findById(id);
 
         assert user != null;
         String newMessage = "email: " + user.getEmail() + ", title: " + title + ", userId: " + id;
@@ -87,7 +91,7 @@ public class KafkaConsumer {
         String requestId = map.get("requestId");
         String userName = map.get("userName");
 
-        User user = userRepository.findUserByUsername(userName).orElse(null);
+        UserDTO user = userService.findByUsername(userName);
         assert user != null;
         int id = user.getId();
 
@@ -95,14 +99,14 @@ public class KafkaConsumer {
         kafkaProducer.sendIdToTask(returnMessage);
     }
 
-    @KafkaListener(topics = "taskTopicFinishedTask", groupId = "UserGroup")
+    @KafkaListener(topics = "taskTopicFinishedTask", groupId = "TaskGroup")
     public void getFinishedTask(String message) throws ExecutionException, InterruptedException {
         LOGGER.info("\n\nReceived message from task service(topic = taskTopicFinishedTask): {} \n\n", message);
         Map<String, String> map = parseMessage(message);
         int taskId = Integer.parseInt(map.get("taskId"));
         int projectId = Integer.parseInt(map.get("projectId"));
         int userId = Integer.parseInt(map.get("userId"));
-        User user = userRepository.findById(userId).orElse(null);
+        UserDTO user = userService.findById(userId);
 
         LOGGER.info("\n\nSend id to project service: {} \n\n", taskId);
         String projectOwnerAndName = ownersId(projectId);
@@ -112,7 +116,7 @@ public class KafkaConsumer {
         int ownerId = Integer.parseInt(projectNameOwner.get("ownerId"));
         String projectName = projectNameOwner.get("projectName");
 
-        User userOwner = userRepository.findById(ownerId).orElse(null);
+        UserDTO userOwner = userService.findById(ownerId);
 
         assert user != null;
         assert userOwner != null;
