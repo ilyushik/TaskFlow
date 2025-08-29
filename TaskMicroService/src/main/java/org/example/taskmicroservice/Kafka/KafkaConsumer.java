@@ -3,6 +3,7 @@ package org.example.taskmicroservice.Kafka;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -29,14 +30,14 @@ public class KafkaConsumer {
 
     private final ConcurrentMap<String, CompletableFuture<Integer>> pendingResponses =
             new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, CompletableFuture<Boolean>>
-            pendingResponsesExistsProjectWithId = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, CompletableFuture<Date>> projectsDeadline =
             new ConcurrentHashMap<>();
     private final ConcurrentMap<String, CompletableFuture<Integer>> pendingResponsesUserId =
             new ConcurrentHashMap<>();
 
     private final RestTemplate restTemplate;
+    @Value("${API_PROJECT_SERVICE}")
+    private String api_project_service;
 
     private Map<String, String> parseMessage(String message) {
         Map<String, String> result = new HashMap<>();
@@ -87,39 +88,13 @@ public class KafkaConsumer {
 
     public boolean projectWithSuchIdExists(int projectId) throws ExecutionException,
             InterruptedException, TimeoutException {
-//        String requestId = UUID.randomUUID().toString();
-//        String message = "requestId: " + requestId + ", projectId: " + projectId;
-//
-//        CompletableFuture<Boolean> future = new CompletableFuture<>();
-//        pendingResponsesExistsProjectWithId.put(requestId, future);
-//
-//        kafkaProducer.sendRequestExistsProjectWithSuchId(message);
-//
-//        return future.get(5, TimeUnit.SECONDS);
-
-
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJVc2VyMSIsInJvbGUiOiJST0xFX1VTRVIiLCJpYXQiOjE3NTY1MDA1NDEsImV4cCI6MTc1NjU4Njk0MX0.nb7X0ALpS0Li6vGg96PlbRl4YBWVDNg3i9DnS-eToy8");
         HttpEntity<String> request = new HttpEntity<>(headers);
-        String url = "http://localhost:8082/api/project/" + projectId;
+        String url = api_project_service + projectId;
 
         ResponseEntity<Boolean> response = restTemplate.exchange(url, HttpMethod.GET, request, Boolean.class);
         return response.getBody();
-    }
-
-    @KafkaListener(topics = "projectTopicResultExistProjectWithSuchId", groupId = "ProjectGroup")
-    public void handleRequestExistsProjectWithSuchId(String message) {
-        logger.info("\n\nReceived data from project service" +
-                "(topic = projectTopicResultExistProjectWithSuchId): " + message + "\n\n");
-        Map<String, String> data = parseMessage(message);
-        String requestId = data.get("requestId");
-        boolean result = Boolean.parseBoolean(data.get("result"));
-        logger.info("\n\nresult: " + result + "\n\n");
-
-        CompletableFuture<Boolean> future = pendingResponsesExistsProjectWithId.get(requestId);
-        if (future != null) {
-            future.complete(result);
-        }
     }
 
     // function to get project's deadline

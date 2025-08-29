@@ -21,12 +21,6 @@ public class KafkaProducer {
         kafkaTemplate.send("taskTopicProjectId", message);
     }
 
-    public void sendRequestExistsProjectWithSuchId(String message) {
-        logger.info("\n\nSent data from task service to project service" +
-                "(topic = taskTopicExistsProjectWithSuchID): " + message + "\n\n");
-        kafkaTemplate.send("taskTopicExistsProjectWithSuchID", message);
-    }
-
     public void sendRequestToGetProjectsDeadline(String message) {
         logger.info("\n\nSend data from task service to project service" +
                 "(topic = taskTopicCheckDeadline): " + message + "\n\n");
