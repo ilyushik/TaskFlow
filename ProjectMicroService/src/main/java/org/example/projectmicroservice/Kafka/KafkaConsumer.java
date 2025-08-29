@@ -5,8 +5,13 @@ import org.example.projectmicroservice.Model.Project;
 import org.example.projectmicroservice.Repository.ProjectRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -17,13 +22,13 @@ import java.util.concurrent.*;
 @RequiredArgsConstructor
 public class KafkaConsumer {
 
+    private final RestTemplate restTemplate;
+
     private static final Logger logger = LoggerFactory.getLogger(KafkaConsumer.class);
 
     private final ProjectRepository projectRepository;
 
     private final KafkaProducer kafkaProducer;
-
-    private final ConcurrentHashMap<String, CompletableFuture<Integer>> mapForOwnersId = new ConcurrentHashMap<>();
 
     private Map<String, String> parseMessage(String message) {
         Map<String, String> result = new HashMap<>();
@@ -75,32 +80,13 @@ public class KafkaConsumer {
 
     public int getOwnersId(String username) throws ExecutionException,
             InterruptedException, TimeoutException {
-        String responseId = UUID.randomUUID().toString();
-        String message = "requestId: " + responseId + ", username: " + username;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJVc2VyMSIsInJvbGUiOiJST0xFX1VTRVIiLCJpYXQiOjE3NTY1MDA1NDEsImV4cCI6MTc1NjU4Njk0MX0.nb7X0ALpS0Li6vGg96PlbRl4YBWVDNg3i9DnS-eToy8");
+        HttpEntity<String> entity = new HttpEntity<>(headers);
 
-        CompletableFuture<Integer> future = new CompletableFuture<>();
-        mapForOwnersId.put(responseId, future);
-
-        kafkaProducer.sendOwnersUsername(message);
-
-        return future.get(5, TimeUnit.SECONDS);
-    }
-
-    // concurrent method
-    @KafkaListener(topics = "usersTopicReturnId" , groupId = "UsersGroup")
-    public void handleUsersReturnId(String message) {
-        logger.info("\n\nReceived data from task service" +
-                "(topic = usersTopicReturnId): " + message + "\n\n");
-        Map<String, String> data = parseMessage(message);
-        String requestId = data.get("requestId");
-        int projectId = Integer.parseInt(data.get("id"));
-        logger.info("\n\nData after parsing \nrequestId: " + requestId + "\nprojectId: " +
-                projectId + "\n\n");
-
-        CompletableFuture<Integer> future = mapForOwnersId.get(requestId);
-        if (future != null) {
-            future.complete(projectId);
-        }
+        String url = "http://localhost:8084/api/v1/user/username/" + username + "/id";
+        ResponseEntity<Integer> response = restTemplate.exchange(url, HttpMethod.GET, entity, Integer.class);
+        return response.getBody();
     }
 
     @KafkaListener(topics = "taskTopicCheckDeadline", groupId = "TaskGroup")

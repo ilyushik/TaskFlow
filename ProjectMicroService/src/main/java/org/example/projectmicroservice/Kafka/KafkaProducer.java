@@ -36,13 +36,6 @@ public class KafkaProducer {
         kafkaTemplate.send("projectTopicResultExistProjectWithSuchId", message);
     }
 
-    // sending username to get id
-    public void sendOwnersUsername(String message) {
-        logger.info("\n\nSend data from project service to user service" +
-                "(topic = projectTopicOwnersId): " + message + "\n\n");
-        kafkaTemplate.send("projectTopicOwnersId", message);
-    }
-
     public void sendProjectsDeadline(String message) {
         logger.info("\n\nSend data from project service to user service" +
                 "(topic = projectTopicProjectsDeadline): " + message + "\n\n");

@@ -27,12 +27,6 @@ public class KafkaTopicConfig {
         return new NewTopic("projectTopicResultExistProjectWithSuchId", 1, (short) 1);
     }
 
-    // topic to get owner's id during creating project
-    @Bean
-    public NewTopic projectTopicOwnersId() {
-        return new NewTopic("projectTopicOwnersId", 1, (short) 1);
-    }
-
     @Bean
     public NewTopic projectTopicProjectsDeadline() {
         return new NewTopic("projectTopicProjectsDeadline", 1, (short) 1);
