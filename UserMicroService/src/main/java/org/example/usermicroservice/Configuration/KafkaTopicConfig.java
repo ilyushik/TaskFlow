@@ -12,12 +12,6 @@ public class KafkaTopicConfig {
         return new NewTopic("usersTopicSendEmail", 1, (short) 1);
     }
 
-    // getting user's username and returning id
-    @Bean
-    public NewTopic usersTopicReturnId() {
-        return new NewTopic("usersTopicReturnId", 1, (short) 1);
-    }
-
     @Bean
     public NewTopic usersTopicReturnIdToTask() {
         return new NewTopic("usersTopicReturnIdToTask", 1, (short) 1);

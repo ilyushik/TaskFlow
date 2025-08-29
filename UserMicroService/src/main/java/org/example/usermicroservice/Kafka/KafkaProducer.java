@@ -21,13 +21,6 @@ public class KafkaProducer {
         kafkaTemplate.send("usersTopicSendEmail", newMessage);
     }
 
-    // send user's id
-    public void returnUsersId(String message) {
-        LOGGER.info("\n\nSend message from user service to project service" +
-                "(topic = usersTopicReturnId): " + message + "\n\n");
-        kafkaTemplate.send("usersTopicReturnId", message);
-    }
-
     // send user's id to task service
     public void sendIdToTask(String message) {
         LOGGER.info("\n\nSend message from user service to task service" +
