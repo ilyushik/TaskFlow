@@ -58,6 +58,12 @@ public class ProjectController {
         return fixedList;
     }
 
+    @GetMapping("/{id}")
+    public boolean projectExists(@PathVariable int id) {
+        Project p = projectService.getProjectById(id);
+        return p != null;
+    }
+
     @GetMapping("/testCaching")
     public String sendEmail(@RequestParam String title, @RequestParam int ownerId) {
         kafkaProducer.sendEmail(ownerId, title);
