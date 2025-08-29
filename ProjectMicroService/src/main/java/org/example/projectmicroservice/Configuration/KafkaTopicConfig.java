@@ -23,11 +23,6 @@ public class KafkaTopicConfig {
     }
 
     @Bean
-    public NewTopic projectTopicResultExistProjectWithSuchId() {
-        return new NewTopic("projectTopicResultExistProjectWithSuchId", 1, (short) 1);
-    }
-
-    @Bean
     public NewTopic projectTopicProjectsDeadline() {
         return new NewTopic("projectTopicProjectsDeadline", 1, (short) 1);
     }

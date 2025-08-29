@@ -5,6 +5,7 @@ import org.example.projectmicroservice.Model.Project;
 import org.example.projectmicroservice.Repository.ProjectRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -23,6 +24,8 @@ import java.util.concurrent.*;
 public class KafkaConsumer {
 
     private final RestTemplate restTemplate;
+    @Value("${API_USER_SERVICE}")
+    private String api_user_service;
 
     private static final Logger logger = LoggerFactory.getLogger(KafkaConsumer.class);
 
@@ -63,28 +66,13 @@ public class KafkaConsumer {
         kafkaProducer.sendProjectsId(responseTopic, messageResponse);
     }
 
-    @KafkaListener(topics = "taskTopicExistsProjectWithSuchID", groupId = "TaskGroup")
-    public void checkExistsProjectWithSuchID(String message) {
-        logger.info("\n\nReceived data from task service" +
-                "(topic = taskTopicExistsProjectWithSuchID): " + message + "\n\n");
-        Map<String, String> data = parseMessage(message);
-        String requestId = data.get("requestId");
-        int projectId = Integer.parseInt(data.get("projectId"));
-        logger.info("\n\nData after parsing \nrequestId: " + requestId + "\nprojectId: " +
-                projectId + "\n\n");
-        Project project = projectRepository.findById(projectId).orElse(null);
-        String result = project != null ? "true" : "false";
-        String messageResponse = "requestId: " + requestId + ", result: " + result;
-        kafkaProducer.sendProjectResultExistProjectWithSuchId(messageResponse);
-    }
-
     public int getOwnersId(String username) throws ExecutionException,
             InterruptedException, TimeoutException {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJVc2VyMSIsInJvbGUiOiJST0xFX1VTRVIiLCJpYXQiOjE3NTY1MDA1NDEsImV4cCI6MTc1NjU4Njk0MX0.nb7X0ALpS0Li6vGg96PlbRl4YBWVDNg3i9DnS-eToy8");
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
-        String url = "http://localhost:8084/api/v1/user/username/" + username + "/id";
+        String url = api_user_service + "username/" + username + "/id";
         ResponseEntity<Integer> response = restTemplate.exchange(url, HttpMethod.GET, entity, Integer.class);
         return response.getBody();
     }
