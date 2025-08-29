@@ -3,8 +3,13 @@ package org.example.taskmicroservice.Kafka;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -30,6 +35,8 @@ public class KafkaConsumer {
             new ConcurrentHashMap<>();
     private final ConcurrentMap<String, CompletableFuture<Integer>> pendingResponsesUserId =
             new ConcurrentHashMap<>();
+
+    private final RestTemplate restTemplate;
 
     private Map<String, String> parseMessage(String message) {
         Map<String, String> result = new HashMap<>();
@@ -80,15 +87,24 @@ public class KafkaConsumer {
 
     public boolean projectWithSuchIdExists(int projectId) throws ExecutionException,
             InterruptedException, TimeoutException {
-        String requestId = UUID.randomUUID().toString();
-        String message = "requestId: " + requestId + ", projectId: " + projectId;
+//        String requestId = UUID.randomUUID().toString();
+//        String message = "requestId: " + requestId + ", projectId: " + projectId;
+//
+//        CompletableFuture<Boolean> future = new CompletableFuture<>();
+//        pendingResponsesExistsProjectWithId.put(requestId, future);
+//
+//        kafkaProducer.sendRequestExistsProjectWithSuchId(message);
+//
+//        return future.get(5, TimeUnit.SECONDS);
 
-        CompletableFuture<Boolean> future = new CompletableFuture<>();
-        pendingResponsesExistsProjectWithId.put(requestId, future);
 
-        kafkaProducer.sendRequestExistsProjectWithSuchId(message);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJVc2VyMSIsInJvbGUiOiJST0xFX1VTRVIiLCJpYXQiOjE3NTY1MDA1NDEsImV4cCI6MTc1NjU4Njk0MX0.nb7X0ALpS0Li6vGg96PlbRl4YBWVDNg3i9DnS-eToy8");
+        HttpEntity<String> request = new HttpEntity<>(headers);
+        String url = "http://localhost:8082/api/project/" + projectId;
 
-        return future.get(5, TimeUnit.SECONDS);
+        ResponseEntity<Boolean> response = restTemplate.exchange(url, HttpMethod.GET, request, Boolean.class);
+        return response.getBody();
     }
 
     @KafkaListener(topics = "projectTopicResultExistProjectWithSuchId", groupId = "ProjectGroup")
