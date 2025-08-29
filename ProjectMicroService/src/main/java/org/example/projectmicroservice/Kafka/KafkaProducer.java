@@ -30,12 +30,6 @@ public class KafkaProducer {
         kafkaTemplate.send(responseTopic, messageResponse);
     }
 
-    public void sendProjectResultExistProjectWithSuchId(String message) {
-        logger.info("\n\nSend data from project service to task service" +
-                "(topic = projectTopicResultExistProjectWithSuchId): " + message + "\n\n");
-        kafkaTemplate.send("projectTopicResultExistProjectWithSuchId", message);
-    }
-
     public void sendProjectsDeadline(String message) {
         logger.info("\n\nSend data from project service to user service" +
                 "(topic = projectTopicProjectsDeadline): " + message + "\n\n");
