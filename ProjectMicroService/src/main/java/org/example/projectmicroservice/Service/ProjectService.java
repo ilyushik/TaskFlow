@@ -36,4 +36,8 @@ public class ProjectService {
         Project project = new Project();
         return projectRepository.findByName(name).orElse(project);
     }
+
+    public Project getProjectById(int id) {
+        return projectRepository.findById(id).orElse(null);
+    }
 }
